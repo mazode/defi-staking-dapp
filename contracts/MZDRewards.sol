@@ -31,5 +31,16 @@ contract MZDRewards is ERC20, ERC20Burnable, Ownable, AccessControl {
         _balance[to] = _balance[to].add(amount);
         _mint(to, amount);
     }
+
+    function safeMzdTransfer(address _to, uint256 _amount) external {
+        require(hasRole(MANAGER_ROLE, _msgSender()), "Not allowed");
+        uint256 mzdBalance = balanceOf(address(this));
+        
+        if(_amount > mzdBalance) {
+            transfer(_to, mzdBalance);
+        } else {
+            transfer(_to, _amount);
+        }
+    }
 }
 
