@@ -24,5 +24,12 @@ contract MZDRewards is ERC20, ERC20Burnable, Ownable, AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MANAGER_ROLE, _msgSender());
     }
+
+    function mint(address to, uint256 amount) external {
+        require(hasRole(MANAGER_ROLE, _msgSender()), "Not allowed");
+        _totalSupply = _totalSupply.add(amount);
+        _balance[to] = _balance[to].add(amount);
+        _mint(to, amount);
+    }
 }
 
