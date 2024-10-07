@@ -27,6 +27,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
 
     MZDRewards public mzdr;
     address public dev;
+    uint256 public mzdPerBlock; // Amount of token issued everytime a block is processed
 
     /*
        Mapping to get wallet address from pool Id,
@@ -36,4 +37,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo; 
 
     PoolInfo[] public poolInfo;
+    uint256 public totalAllocation = 0; // Total pool allocation combined
+    uint256 public startBlock;
+    uint256 public BONUS_MULTIPLIER;
 }
