@@ -40,4 +40,28 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     uint256 public totalAllocation = 0; // Total pool allocation combined
     uint256 public startBlock;
     uint256 public BONUS_MULTIPLIER;
+
+    constructor(
+        MZDRewards _mzdr,
+        address _dev,
+        uint256 _mzdPerBlock,
+        uint256 _startBlock,
+        uint256 _multiplier
+    ) public {
+        mzdr = _mzdr;
+        dev = _dev;
+        mzdPerBlock = _mzdPerBlock;
+        startBlock = _startBlock;
+        BONUS_MULTIPLIER = _multiplier;
+
+        poolInfo.push(PoolInfo({
+            liqPoolToken: _mzdr,
+            allocPoint: 10000,
+            lastRewardBlock: _startBlock,
+            rewardTokenPerShare: 0
+        }));
+
+        totalAllocation = 10000;
+    }
+
 }
