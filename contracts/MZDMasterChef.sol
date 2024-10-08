@@ -90,4 +90,11 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         BONUS_MULTIPLIER = multiplierNumber;
     }
 
+    function checkPoolDuplicate(IERC20 token) public view {
+        uint256 length = poolInfo.length;
+        for(uint256 _pid = 0; _pid < length; _pid++) {
+            require(poolInfo[_pid].liqPoolToken != token, "Pool already exists");
+        }
+    }
+
 }
