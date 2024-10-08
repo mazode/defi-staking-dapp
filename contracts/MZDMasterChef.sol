@@ -82,4 +82,8 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         );
     }
 
+    function getMultiplier(address _from, uint256 _to) public view returns(uint256) {
+        return _to.sub(_from).mul(BONUS_MULTIPLIER);
+    }
+
 }
