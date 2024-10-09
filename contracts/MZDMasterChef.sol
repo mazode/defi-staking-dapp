@@ -110,4 +110,17 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         }
     }
 
+    function add(uint256 _allocPoint, IERC20 _liqPoolToken, bool _withUpdate) public onlyOwner {
+        checkPoolDuplicate(_liqPoolToken);
+        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
+        totalAllocation = totalAllocation.add(_allocPoint);
+        poolInfo.push(PoolInfo({
+            liqPoolToken: _liqPoolToken,
+            allocPoint: _allocPoint,
+            lastRewardBlock: lastRewardBlock,
+            rewardTokenPerShare: 0
+        }));
+        updateStakingPool();
+    }
+
 }
