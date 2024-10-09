@@ -106,6 +106,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         if(points != 0) {
             points = points.div(3);
             totalAllocation = totalAllocation.sub(poolInfo[0].allocPoint).add(points);
+            poolInfo[0].allocPoint = points;
         }
     }
 
