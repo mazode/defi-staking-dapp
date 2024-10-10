@@ -202,4 +202,8 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         user.pendingReward = user.amount.mul(rewardTokenPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
+
+    function unstake(uint256 _pid, uint256 _amount) public validatePool(_pid) {
+        
+    }
 }
