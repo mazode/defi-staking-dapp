@@ -227,8 +227,22 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         }
         user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
     }
+    
+    function emergencyWithdraw(uint256 _pid) public {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        pool.liqPoolToken.safeTransfer(address(msg.sender), user.amount);
+        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+        user.amount = 0;
+        user.pendingReward = 0;
+    }
 
     function safeMzdTransfer(address _to, uint256 _amount) internal {
         mzdr.safeMzdTransfer(_to, amount);
+    }
+
+    function changeDev(address _dev) public {
+        require(msg.sender == dev, "Not Authorized");
+        dev = _dev;
     }
 }
