@@ -152,4 +152,6 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
 
     function stake(uint256 _pid, uint256 _amount) public validatePool(_pid) {}
 
+    function set(uint256 _pid, uint256 _allocPoint, bool _wihtUpdate) public onlyOwner {}
+
 }
