@@ -181,7 +181,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         return user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
     }
 
-    function stake(uint256 _pid, uint256 _amount) public validatePool(_pid) {}
+    function stake(uint256 _pid, uint256 _amount) public validatePool(_pid) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -195,4 +195,6 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
             pool.liqPoolToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
+        user.pendingReward = user.amount.mul(rewardTokenPerShare).div(1e12);
+    }
 }
