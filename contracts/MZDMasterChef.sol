@@ -207,11 +207,9 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        if(user.amount > 0) {
-            uint256 pending = user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
-            if(pending > 0) {
-                safeMzdTransfer(msg.sender, pending);
-            }
+        uint256 pending = user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+        if(pending > 0) {
+            safeMzdTransfer(msg.sender, pending);
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
