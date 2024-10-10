@@ -149,10 +149,6 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
-    function safeMzdTransfer(address _to, uint256 _amount) internal {
-        mzdr.safeMzdTransfer(_to, amount);
-    }
-
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
         for(uint256 pid; pid < length; pid++) {
@@ -190,7 +186,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if(user.amount > 0) {
-            uint256 pending = user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+            uint256 pending = user.amount.mul(pool.rewardTokenPerShare).div(1e12).sub(user.pendingReward);
             if(pending > 0) {
                 safeMzdTransfer(msg.sender, pending);
             }
@@ -199,7 +195,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
             pool.liqPoolToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount);
         }
-        user.pendingReward = user.amount.mul(rewardTokenPerShare).div(1e12);
+        user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -207,7 +203,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        uint256 pending = user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+        uint256 pending = user.amount.mul(pool.rewardTokenPerShare).div(1e12).sub(user.pendingReward);
         if(pending > 0) {
             safeMzdTransfer(msg.sender, pending);
         }
@@ -215,7 +211,24 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
             user.amount = user.amount.sub(_amount);
             pool.liqPoolToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.pendingReward = user.amount.mul(rewardTokenPerShare).div(1e12);
+        user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
+    }
+
+    function autoCompound() public {
+        PoolInfo storage pool = poolInfo[0];
+        UserInfo storage user = userInfo[0][msg.sender];
+        updatePool(0);
+        if (user.amount > 0) {
+            uint256 pending = user.amount.mul(pool.rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+            if(pending > 0) {
+                user.amount = user.amount.add(pending);
+            }
+        }
+        user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
+    }
+
+    function safeMzdTransfer(address _to, uint256 _amount) internal {
+        mzdr.safeMzdTransfer(_to, amount);
     }
 }
