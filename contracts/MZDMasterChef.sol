@@ -181,6 +181,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
             uint256 tokenReward = multiplier.mul(mzdPerBlock).mul(pool.allocPoint).div(totalAllocation);
             rewardTokenPerShare = rewardTokenPerShare.add(tokenReward.mul(1e12).div(liqPoolSupply));
         }
+        return user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
     }
 
 }
