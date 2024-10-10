@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./MZDRewards.sol";
-// import "./N2D-DeFI-Staking-N2DRPay-SmartContract.sol";
 
 contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
@@ -146,11 +145,9 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
-    function safeMzdrTransfer(address _to, uint256 _amount) internal {
-        mzdr.safeMzdrTransfer(_to, amount);
+    function safeMzdTransfer(address _to, uint256 _amount) internal {
+        mzdr.safeMzdTransfer(_to, amount);
     }
-
-    function stake(uint256 _pid, uint256 _amount) public validatePool(_pid) {}
 
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
@@ -184,4 +181,18 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         return user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
     }
 
+    function stake(uint256 _pid, uint256 _amount) public validatePool(_pid) {}
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        updatePool(_pid);
+        if(user.amount > 0) {
+            uint256 pending = user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+            if(pending > 0) {
+                safeMzdTransfer(msg.sender, pending);
+            }
+        }
+        if(_amount > 0) {
+            pool.liqPoolToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+            user.amount = user.amount.add(_amount);
+        }
 }
