@@ -40,6 +40,10 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     uint256 public startBlock;
     uint256 public BONUS_MULTIPLIER;
 
+    event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
+    event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+
     constructor(
         MZDRewards _mzdr,
         address _dev,
@@ -196,5 +200,6 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
             user.amount = user.amount.add(_amount);
         }
         user.pendingReward = user.amount.mul(rewardTokenPerShare).div(1e12);
+        emit Deposit(msg.sender, _pid, _amount);
     }
 }
