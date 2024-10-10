@@ -64,6 +64,11 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         totalAllocation = 10000;
     }
 
+    modifier validatePool(uint256 _pid) {
+        require(_pid < poolInfo.length, "Invalid Pool Id ");
+        _;
+    }
+
     function  poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
@@ -121,6 +126,18 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
             rewardTokenPerShare: 0
         }));
         updateStakingPool();
+    }
+
+    function updatePool(uint256 _pid) public validatePool(_pid) {
+        PoolInfo storage pool = poolInfo[_pid];
+        if(block.number <= pool.lastRewardBlock) {
+            return;
+        }
+        uint256 liqPoolSupply = pool.liqPoolToken.balanceOf(address(this));
+        if(liqPoolSupply == 0) {
+            pool.lastRewardBlock = block.number;
+            return;
+        }
     }
 
 }
