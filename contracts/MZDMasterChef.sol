@@ -9,39 +9,37 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./MZDRewards.sol";
 import "./MZDPay.sol";
 
-contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
+contract MZDMasterChef is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
+    // Struct to store user information
     struct UserInfo {
-        uint256 amount;
-        uint256 pendingReward;
+        uint256 amount; // How many LiqPool tokens the user has staked 
+        uint256 pendingReward; // User's pending reward
     }
 
+    // Struct to store pool information
     struct PoolInfo {
-        uint256 liqPoolToken;
-        uint256 allocPoint;
-        uint256 lastRewardBlock;
-        uint256 rewardTokenPerShare;
+        IERC20 liqPoolToken; // Liquidity pool token address
+        uint256 allocPoint; // How many allocation points assigned to this pool
+        uint256 lastRewardBlock; // Last block number where rewards were calculated
+        uint256 rewardTokenPerShare; // Accumulated reward tokens per share
     }
 
-    MZDRewards public mzdr;
-    MZDPay public mzdpay;
-    address public dev;
-    uint256 public mzdPerBlock; // Amount of token issued everytime a block is processed
+    MZDRewards public mzdr; // Reward token contract
+    MZDPay public mzdpay; // Pay token contract
+    address public dev; // Developer address
+    uint256 public mzdPerBlock; // Reward tokens distributed per block
 
-    /*
-       Mapping to get wallet address from pool Id,
-       and then map that wallet address to the struct
-       to obtain the amount of the user.
-     */
+    // Mapping from pool ID to user address to user information
     mapping(uint256 => mapping(address => UserInfo)) public userInfo; 
 
-    PoolInfo[] public poolInfo;
-    uint256 public totalAllocation = 0; // Total pool allocation combined
-    uint256 public startBlock;
-    uint256 public BONUS_MULTIPLIER;
+    PoolInfo[] public poolInfo; // Array of pool information
+    uint256 public totalAllocation = 0; // Total allocation points across all pools
+    uint256 public startBlock; // Block number when reward distribution starts
+    uint256 public BONUS_MULTIPLIER; // Bonus multiplier for early stakers
 
+    // Events to track deposits, withdrawals, and emergency withdrawals
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -53,7 +51,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         uint256 _mzdPerBlock,
         uint256 _startBlock,
         uint256 _multiplier
-    ) public {
+    ) {
         mzdr = _mzdr;
         mzdpay = _mzdpay;
         dev = _dev;
@@ -61,8 +59,9 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         startBlock = _startBlock;
         BONUS_MULTIPLIER = _multiplier;
 
+        // Adding a default pool
         poolInfo.push(PoolInfo({
-            liqPoolToken: _mzdr,
+            liqPoolToken: IERC20(address(_mzdr)),
             allocPoint: 10000,
             lastRewardBlock: _startBlock,
             rewardTokenPerShare: 0
@@ -71,15 +70,18 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         totalAllocation = 10000;
     }
 
+    // Modifier to validate pool ID
     modifier validatePool(uint256 _pid) {
         require(_pid < poolInfo.length, "Invalid Pool Id ");
         _;
     }
 
+    // Return number of pools
     function  poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
 
+    // Get information about a specific pool
     function getPoolInfo(uint256 pid) public view returns(
         address liqPoolToken,
         uint256 allocPoint,
@@ -87,21 +89,24 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         uint256 rewardTokenPerShare
     ) {
         return (
-            (address(poolInfo[pid].liqPoolToken)),
+            address(poolInfo[pid].liqPoolToken),
             poolInfo[pid].allocPoint,
             poolInfo[pid].lastRewardBlock,
             poolInfo[pid].rewardTokenPerShare
         );
     }
 
+    // Calculate multiplier based on blocks
     function getMultiplier(address _from, uint256 _to) public view returns(uint256) {
         return _to.sub(_from).mul(BONUS_MULTIPLIER);
     }
 
+    // Update the bonus multiplier
     function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
         BONUS_MULTIPLIER = multiplierNumber;
     }
 
+    // Ensure no duplicate pools exist
     function checkPoolDuplicate(IERC20 token) public view {
         uint256 length = poolInfo.length;
         for(uint256 _pid = 0; _pid < length; _pid++) {
@@ -109,6 +114,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         }
     }
 
+    // Update staking pool with new allocation points
     function updateStakingPool() internal {
         uint256 length = poolInfo.length;
         uint256 points = 0;
@@ -122,6 +128,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         }
     }
 
+    // Add new liquidity pool
     function add(uint256 _allocPoint, IERC20 _liqPoolToken) public onlyOwner {
         checkPoolDuplicate(_liqPoolToken);
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
@@ -135,6 +142,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         updateStakingPool();
     }
 
+    // Update pool information
     function updatePool(uint256 _pid) public validatePool(_pid) {
         PoolInfo storage pool = poolInfo[_pid];
         if(block.number <= pool.lastRewardBlock) {
@@ -153,6 +161,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
+    // Mass update all pools
     function massUpdatePools() public {
         uint256 length = poolInfo.length;
         for(uint256 pid; pid < length; pid++) {
@@ -160,18 +169,20 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         }
     }
 
+    // Set allocation points for a pool
     function set(uint256 _pid, uint256 _allocPoint, bool _wihtUpdate) public onlyOwner {
         if(_wihtUpdate) {
             massUpdatePools();
         }
         uint256 prevAllocPoint = poolInfo[_pid].allocPoint;
-        poolInfo[_pid].allocPoint = allocPoint;
+        poolInfo[_pid].allocPoint = _allocPoint;
         if(prevAllocPoint != _allocPoint) {
             totalAllocation = totalAllocation.sub(prevAllocPoint).add(_allocPoint);
             updateStakingPool();
         }
     }
 
+    // View function to check pending rewards
     function pendingReward(uint256 _pid, address _user) external view returns(uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
@@ -185,6 +196,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         return user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
     }
 
+    // Function to stake tokens into a pool
     function stake(uint256 _pid, uint256 _amount) public validatePool(_pid) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -203,6 +215,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
+    // Function to unstake tokens from a pool
     function unstake(uint256 _pid, uint256 _amount) public validatePool(_pid) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -219,19 +232,21 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
+    // Function to handle the auto-compounding of the staking rewards
     function autoCompound() public {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[0][msg.sender];
         updatePool(0);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+            uint256 pending = (user.amount * pool.rewardTokenPerShare / 1e12) - user.pendingReward;
             if(pending > 0) {
-                user.amount = user.amount.add(pending);
+                user.amount += pending;
             }
         }
-        user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
+        user.pendingReward = user.amount * pool.rewardTokenPerShare / 1e12;
     }
-    
+
+    // Emergency withdrawal in case of any issue
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -241,10 +256,12 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         user.pendingReward = 0;
     }
 
+    // Safe MZD transfer function to handle rounding errors
     function safeMzdTransfer(address _to, uint256 _amount) internal {
         mzdpay.safeMzdTransfer(_to, amount);
     }
 
+    // Function to change the developer
     function changeDev(address _dev) public {
         require(msg.sender == dev, "Not Authorized");
         dev = _dev;
