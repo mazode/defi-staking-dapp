@@ -21,8 +21,8 @@ contract MZDRewards is ERC20, ERC20Burnable, Ownable, AccessControl {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE"); 
 
     constructor() ERC20("MZD Rewards", "MZDR") {
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(MANAGER_ROLE, _msgSender());
+        grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        grantRole(MANAGER_ROLE, _msgSender());
     }
 
     function mint(address to, uint256 amount) external {
