@@ -45,13 +45,15 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
     constructor(
+        address initialOwner,
         MZDRewards _mzdr,
         MZDPay _mzdpay,
         address _dev,
         uint256 _mzdPerBlock,
         uint256 _startBlock,
         uint256 _multiplier
-    ) {
+    ) Ownable() {
+        transferOwnership(initialOwner);
         mzdr = _mzdr;
         mzdpay = _mzdpay;
         dev = _dev;
@@ -98,7 +100,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
 
     // Calculate multiplier based on blocks
     function getMultiplier(address _from, uint256 _to) public view returns(uint256) {
-        return _to.sub(_from).mul(BONUS_MULTIPLIER);
+        return (_to - (_from * BONUS_MULTIPLIER));
     }
 
     // Update the bonus multiplier
@@ -119,11 +121,11 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
         uint256 length = poolInfo.length;
         uint256 points = 0;
         for(uint256 pid = 1; pid < length; pid++) {
-            points = points.add(poolInfo[pid].allocPoint);
+            points += poolInfo[pid].allocPoint;
         }
         if(points != 0) {
-            points = points.div(3);
-            totalAllocation = totalAllocation.sub(poolInfo[0].allocPoint).add(points);
+            points /= 3;
+            totalAllocation = ((totalAllocation - poolInfo[0].allocPoint) + points);
             poolInfo[0].allocPoint = points;
         }
     }
@@ -132,7 +134,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
     function add(uint256 _allocPoint, IERC20 _liqPoolToken) public onlyOwner {
         checkPoolDuplicate(_liqPoolToken);
         uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
-        totalAllocation = totalAllocation.add(_allocPoint);
+        totalAllocation += _allocPoint;
         poolInfo.push(PoolInfo({
             liqPoolToken: _liqPoolToken,
             allocPoint: _allocPoint,
@@ -154,10 +156,10 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 tokenReward = multiplier.mul(mzdPerBlock).mul(pool.allocPoint).div(totalAllocation);
+        uint256 tokenReward = ((multiplier * mzdPerBlock * pool.allocPoint) / totalAllocation);
         mzdr.mint(dev, tokenReward.div(10));
         mzdr.mint(address(mzdpay), tokenReward);
-        pool.rewardTokenPerShare = pool.rewardTokenPerShare.add(tokenReward).mul(1e12).div(liqPoolSupply);
+        pool.rewardTokenPerShare = pool.rewardTokenPerShare + ((tokenReward * 1e12) / liqPoolSupply);
         pool.lastRewardBlock = block.number;
     }
 
@@ -177,7 +179,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
         uint256 prevAllocPoint = poolInfo[_pid].allocPoint;
         poolInfo[_pid].allocPoint = _allocPoint;
         if(prevAllocPoint != _allocPoint) {
-            totalAllocation = totalAllocation.sub(prevAllocPoint).add(_allocPoint);
+            totalAllocation = ((totalAllocation - prevAllocPoint) + _allocPoint);
             updateStakingPool();
         }
     }
@@ -190,10 +192,10 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
         uint256 liqPoolSupply = pool.liqPoolToken.balanceOf(address(this));
         if(block.number > pool.lastRewardBlock && liqPoolSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 tokenReward = multiplier.mul(mzdPerBlock).mul(pool.allocPoint).div(totalAllocation);
-            rewardTokenPerShare = rewardTokenPerShare.add(tokenReward.mul(1e12).div(liqPoolSupply));
+            uint256 tokenReward = ((multiplier * mzdPerBlock * pool.allocPoint) / totalAllocation);
+            rewardTokenPerShare = rewardTokenPerShare + ((tokenReward * 1e12) / liqPoolSupply);
         }
-        return user.amount.mul(rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+        return ((user.amount * rewardTokenPerShare) / 1e12) - user.pendingReward;
     }
 
     // Function to stake tokens into a pool
@@ -202,16 +204,16 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if(user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+            uint256 pending = ((user.amount * pool.rewardTokenPerShare) / 1e12) - user.pendingReward;
             if(pending > 0) {
                 safeMzdTransfer(msg.sender, pending);
             }
         }
         if(_amount > 0) {
             pool.liqPoolToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
+            user.amount += _amount;
         }
-        user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
+        user.pendingReward = (user.amount * pool.rewardTokenPerShare) / 1e12;
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -220,15 +222,15 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.rewardTokenPerShare).div(1e12).sub(user.pendingReward);
+        uint256 pending = ((user.amount * pool.rewardTokenPerShare) / 1e12) - user.pendingReward;
         if(pending > 0) {
             safeMzdTransfer(msg.sender, pending);
         }
         if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
+            user.amount -= _amount;
             pool.liqPoolToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.pendingReward = user.amount.mul(pool.rewardTokenPerShare).div(1e12);
+        user.pendingReward = (user.amount * pool.rewardTokenPerShare) / 1e12;
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
@@ -243,7 +245,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
                 user.amount += pending;
             }
         }
-        user.pendingReward = user.amount * pool.rewardTokenPerShare / 1e12;
+        user.pendingReward = (user.amount * pool.rewardTokenPerShare) / 1e12;
     }
 
     // Emergency withdrawal in case of any issue
