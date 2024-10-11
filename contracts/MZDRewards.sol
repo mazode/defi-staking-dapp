@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 pragma solidity ^0.8.20;
 
 contract MZDRewards is ERC20, ERC20Burnable, Ownable, AccessControl {
-    using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
     mapping(address => uint256) private _balance;
@@ -20,20 +19,20 @@ contract MZDRewards is ERC20, ERC20Burnable, Ownable, AccessControl {
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE"); 
 
-    constructor() ERC20("MZD Rewards", "MZDR") {
-        grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        grantRole(MANAGER_ROLE, _msgSender());
+    constructor(address initialOwner) ERC20("MZD Rewards", "MZDR") Ownable(initialOwner) {
+        grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
+        grantRole(MANAGER_ROLE, initialOwner);
     }
 
     function mint(address to, uint256 amount) external {
-        require(hasRole(MANAGER_ROLE, _msgSender()), "Not allowed"); 
-        _totalSupply = _totalSupply.add(amount);
-        _balance[to] = _balance[to].add(amount);
+        require(hasRole(MANAGER_ROLE, msg.sender), "Not allowed"); 
+        _totalSupply += amount;
+        _balance[to] += amount;
         _mint(to, amount);
     }
 
     function safeMzdTransfer(address _to, uint256 _amount) external {
-        require(hasRole(MANAGER_ROLE, _msgSender()), "Not allowed");
+        require(hasRole(MANAGER_ROLE, msg.sender), "Not allowed");
         uint256 mzdBalance = balanceOf(address(this));
         
         if(_amount > mzdBalance) {
