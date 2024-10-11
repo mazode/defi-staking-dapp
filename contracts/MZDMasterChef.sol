@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./MZDRewards.sol";
+import "./MZDPay.sol";
 
 contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
@@ -25,6 +26,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     }
 
     MZDRewards public mzdr;
+    MZDPay public mzdpay;
     address public dev;
     uint256 public mzdPerBlock; // Amount of token issued everytime a block is processed
 
@@ -46,12 +48,14 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
 
     constructor(
         MZDRewards _mzdr,
+        MZDPay _mzdpay,
         address _dev,
         uint256 _mzdPerBlock,
         uint256 _startBlock,
         uint256 _multiplier
     ) public {
         mzdr = _mzdr;
+        mzdpay = _mzdpay;
         dev = _dev;
         mzdPerBlock = _mzdPerBlock;
         startBlock = _startBlock;
@@ -144,7 +148,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(mzdPerBlock).mul(pool.allocPoint).div(totalAllocation);
         mzdr.mint(dev, tokenReward.div(10));
-        mzdr.mint(address(mzdr), tokenReward);
+        mzdr.mint(address(mzdpay), tokenReward);
         pool.rewardTokenPerShare = pool.rewardTokenPerShare.add(tokenReward).mul(1e12).div(liqPoolSupply);
         pool.lastRewardBlock = block.number;
     }
@@ -238,7 +242,7 @@ contract MZDMasterChefV1 is Ownable, ReentrancyGuard {
     }
 
     function safeMzdTransfer(address _to, uint256 _amount) internal {
-        mzdr.safeMzdTransfer(_to, amount);
+        mzdpay.safeMzdTransfer(_to, amount);
     }
 
     function changeDev(address _dev) public {
