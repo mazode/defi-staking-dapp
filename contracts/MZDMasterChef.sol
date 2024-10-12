@@ -99,7 +99,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
     }
 
     // Calculate multiplier based on blocks
-    function getMultiplier(address _from, uint256 _to) public view returns(uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) public view returns(uint256) {
         return (_to - (_from * BONUS_MULTIPLIER));
     }
 
@@ -157,7 +157,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 tokenReward = ((multiplier * mzdPerBlock * pool.allocPoint) / totalAllocation);
-        mzdr.mint(dev, tokenReward.div(10));
+        mzdr.mint(dev, tokenReward / 10);
         mzdr.mint(address(mzdpay), tokenReward);
         pool.rewardTokenPerShare = pool.rewardTokenPerShare + ((tokenReward * 1e12) / liqPoolSupply);
         pool.lastRewardBlock = block.number;
@@ -260,7 +260,7 @@ contract MZDMasterChef is Ownable, ReentrancyGuard {
 
     // Safe MZD transfer function to handle rounding errors
     function safeMzdTransfer(address _to, uint256 _amount) internal {
-        mzdpay.safeMzdTransfer(_to, amount);
+        mzdpay.safeMzdTransfer(_to, _amount);
     }
 
     // Function to change the developer
